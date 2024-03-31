@@ -1,102 +1,88 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ravi_co.Data;
 using ravi_co.Models;
 using ravi_co.Models.DTOs;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Xml.Linq;
+using System.Threading.Tasks;
 
 namespace ravi_co.Controllers
 {
     [Route("api/coord")]
     [ApiController]
-    /// commenting out will cause validation failure 
     public class coordinateController : ControllerBase
     {
-        [HttpGet]
-        public ActionResult<IEnumerable<CoordinateDTO>> GetCos()
+        private readonly CoordinateContext _context;
+
+        public coordinateController(CoordinateContext context)
         {
-            return Ok(Coord_Store.list);
+            _context = context;
         }
 
-        [HttpGet("{_id:int}" , Name = "GetCoord")]
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Coordinate>>> GetCos()
+        {
+            var coordinates = await _context.points.ToListAsync();
+            return Ok(coordinates);
+        }
+
+        [HttpGet("{_id:int}", Name = "GetCoord")]
         [ProducesResponseType(200)]
         [ProducesResponseType(404)]
         [ProducesResponseType(400)]
-        public ActionResult<Coordinate> GetCo(int _id)
+        public async Task<ActionResult<Coordinate>> GetCo(int _id)
         {
-            
-
-            if (_id == 0)
-            {
-                return BadRequest();
-            }
-            
-            var x = Coord_Store.list.FirstOrDefault(a => a.id == _id);
-            if (x == null)
+            var coordinate = await _context.points.FindAsync(_id);
+            if (coordinate == null)
             {
                 return NotFound();
             }
-            return  Ok(x);
+            return Ok(coordinate);
         }
 
         [HttpPost]
         [ProducesResponseType(201)]
         [ProducesResponseType(400)]
-        public ActionResult<Coordinate> CreateCord([FromBody] Coordinate dto)
+        public async Task<ActionResult<Coordinate>> CreateCord([FromBody] Coordinate dto)
         {
-            if (ModelState.IsValid == false)
+            if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            if (dto == null)
-            {
-                return BadRequest();
-            }
 
-            int newId;
-            if (Coord_Store.list.Count == 0)
-            {
-                newId = 1;
-            }
-            else
-            {
-                newId = Coord_Store.list.Max(a => a.id) + 1;
-            }
+            _context.points.Add(dto);
+            await _context.SaveChangesAsync();
 
-            dto.id = newId;
-            Coord_Store.list.Add(dto);
             return CreatedAtRoute("GetCoord", new { _id = dto.id }, dto);
         }
+
         [HttpGet("latest")]
         [ProducesResponseType(200)]
         [ProducesResponseType(404)]
-        public ActionResult<Coordinate> GetLatestCoordinate()
+        public async Task<ActionResult<Coordinate>> GetLatestCoordinate()
         {
-            if (Coord_Store.list.Count == 0)
+            var latestCoordinate = await _context.points.OrderByDescending(c => c.id).FirstOrDefaultAsync();
+            if (latestCoordinate == null)
             {
                 var defaultCoordinate = new Coordinate { id = 1, X = 0, Y = 0 };
-                Coord_Store.list.Add(defaultCoordinate);
+                _context.points.Add(defaultCoordinate);
+                await _context.SaveChangesAsync();
                 return Ok(defaultCoordinate);
             }
-
-            var latestCoordinate = Coord_Store.list.OrderByDescending(c => c.id).FirstOrDefault();
             return Ok(latestCoordinate);
         }
+
         [HttpPost("reset")]
         [ProducesResponseType(200)]
-        public ActionResult ResetCoordinates()
+        public async Task<ActionResult> ResetCoordinates()
         {
-            Coord_Store.list.Clear();
+            _context.points.RemoveRange(_context.points);
+            await _context.SaveChangesAsync();
 
-            Coordinate defaultCoordinate = new Coordinate
-            {
-                id = 1,
-                X = 0,
-                Y = 0
-            };
-            Coord_Store.list.Add(defaultCoordinate);
+            var defaultCoordinate = new Coordinate { id = 1, X = 0, Y = 0 };
+            _context.points.Add(defaultCoordinate);
+            await _context.SaveChangesAsync();
 
             return Ok();
         }
