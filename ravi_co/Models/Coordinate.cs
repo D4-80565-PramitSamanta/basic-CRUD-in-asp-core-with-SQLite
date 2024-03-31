@@ -6,10 +6,10 @@ namespace ravi_co.Models
 
     public class Coordinate
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int id { get; set; }
+        [Required]
         public int X { get; set; }
+        [Required]
         public int Y { get; set; }
 
     }

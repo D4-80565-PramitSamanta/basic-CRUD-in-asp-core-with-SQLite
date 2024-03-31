@@ -1,44 +1,81 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ravi_co.Data;
 using ravi_co.Models;
 using ravi_co.Models.DTOs;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using System.Xml.Linq;
 
 namespace ravi_co.Controllers
 {
     [Route("api/coord")]
     [ApiController]
+    /// commenting out will cause validation failure 
     public class coordinateController : ControllerBase
     {
+        
         [HttpGet]
         public ActionResult<IEnumerable<CoordinateDTO>> GetCos()
         {
-            return Ok(new List<CoordinateDTO>()
-            {
-                new CoordinateDTO { X = 10, Y = 20 },
-                new CoordinateDTO { X = 15, Y = 25 },
-                new CoordinateDTO { X = 20, Y = 30 }
-            });
+            return Ok(Coord_Store.list);
         }
 
-        [HttpGet("{_id:int}")]
+        [HttpGet("{_id:int}" , Name = "GetCoord")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(400)]
         public ActionResult<Coordinate> GetCo(int _id)
         {
+            
+
             if (_id == 0)
             {
                 return BadRequest();
             }
-            var list =  new List<Coordinate>()
-            {
-                new Coordinate {id = 1, X = 10, Y = 20 },
-                new Coordinate {id = 2, X = 15, Y = 25 },
-                new Coordinate {id = 3, X = 20, Y = 30 }
-            };
-            var x = list.FirstOrDefault(a => a.id == _id);
+            
+            var x = Coord_Store.list.FirstOrDefault(a => a.id == _id);
             if (x == null)
             {
                 return NotFound();
             }
             return  Ok(x);
         }
+
+        [HttpPost]
+        [ProducesResponseType(201)]
+        [ProducesResponseType(400)]
+        public ActionResult<Coordinate> CreateCord([FromBody] Coordinate dto)
+        {
+            if (ModelState.IsValid == false)
+            {
+                return BadRequest(ModelState);
+            }
+            if (dto == null)
+            {
+                return BadRequest();
+            }
+
+            dto.id = Coord_Store.list.OrderByDescending(a => a.id).FirstOrDefault().id + 1;
+            Coord_Store.list.Add(dto);
+
+            return CreatedAtRoute("GetCoord", new { _id = dto.id } , dto);
+        }
+        [HttpGet("latest")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(404)]
+        public ActionResult<Coordinate> GetLatestCoordinate()
+        {
+            if (Coord_Store.list.Count == 0)
+            {
+                var defaultCoordinate = new Coordinate { id = 1, X = 0, Y = 0 };
+                Coord_Store.list.Add(defaultCoordinate);
+                return Ok(defaultCoordinate);
+            }
+
+            var latestCoordinate = Coord_Store.list.OrderByDescending(c => c.id).FirstOrDefault();
+            return Ok(latestCoordinate);
+        }
+
     }
 }
