@@ -14,7 +14,6 @@ namespace ravi_co.Controllers
     /// commenting out will cause validation failure 
     public class coordinateController : ControllerBase
     {
-        
         [HttpGet]
         public ActionResult<IEnumerable<CoordinateDTO>> GetCos()
         {
@@ -56,10 +55,19 @@ namespace ravi_co.Controllers
                 return BadRequest();
             }
 
-            dto.id = Coord_Store.list.OrderByDescending(a => a.id).FirstOrDefault().id + 1;
-            Coord_Store.list.Add(dto);
+            int newId;
+            if (Coord_Store.list.Count == 0)
+            {
+                newId = 1;
+            }
+            else
+            {
+                newId = Coord_Store.list.Max(a => a.id) + 1;
+            }
 
-            return CreatedAtRoute("GetCoord", new { _id = dto.id } , dto);
+            dto.id = newId;
+            Coord_Store.list.Add(dto);
+            return CreatedAtRoute("GetCoord", new { _id = dto.id }, dto);
         }
         [HttpGet("latest")]
         [ProducesResponseType(200)]
@@ -76,6 +84,21 @@ namespace ravi_co.Controllers
             var latestCoordinate = Coord_Store.list.OrderByDescending(c => c.id).FirstOrDefault();
             return Ok(latestCoordinate);
         }
+        [HttpPost("reset")]
+        [ProducesResponseType(200)]
+        public ActionResult ResetCoordinates()
+        {
+            Coord_Store.list.Clear();
 
+            Coordinate defaultCoordinate = new Coordinate
+            {
+                id = 1,
+                X = 0,
+                Y = 0
+            };
+            Coord_Store.list.Add(defaultCoordinate);
+
+            return Ok();
+        }
     }
 }
