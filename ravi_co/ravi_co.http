@@ -1,0 +1,6 @@
+@ravi_co_HostAddress = http://localhost:5124
+
+GET {{ravi_co_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
